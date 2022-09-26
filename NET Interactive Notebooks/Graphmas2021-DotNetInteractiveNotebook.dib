@@ -1,0 +1,225 @@
+#!markdown
+
+# Merry Graphmas 2021 - .NET Interactive Notebook Edition
+
+Merry Graphmas is a series of blog posts and videos written by Sadukie. This notebook is the companion notebook for the following blog post: [Exploring Microsoft.Data.Analysis for C# in a .NET Interactive Notebook](https://data-adventurer.com/2021/12/09/exploring-microsoft-data-analysis-for-c-in-a-net-interactive-notebook/).
+
+#!markdown
+
+## Load the data
+
+The data being using is stored in [DecemberPublicHolidays.csv](DecemberPublicHolidays.csv). This data comes from [the Public Holidays dataset](https://learn.microsoft.com/azure/open-datasets/dataset-public-holidays?tabs=azureml-opendatasets) from [Azure Open Datasets](https://learn.microsoft.com/azure/open-datasets/). Since the package is a Python package, we have exported the data to work with in C#. Our Python dataframe was known as `hol_df` and may be referred to throughout this notebook. We are using [Microsoft.Data.Analysis](https://www.nuget.org/packages/Microsoft.Data.Analysis/) since we have worked with `pandas` in Python and wanted to compare their feel.
+
+#!markdown
+
+The line below will install the Microsoft.Data.Analysis package that we will explore throughout this notebook.
+
+#!csharp
+
+#r "nuget: Microsoft.Data.Analysis, 0.19.0"
+
+#!markdown
+
+We will use Microsoft.Data.Analysis to handle the importing of data. We are going to explore the data in here as we would explore it using `pandas` in Python. First, let's load the data into a DataFrame.
+
+#!csharp
+
+using Microsoft.Data.Analysis;
+// Load data like pd.read_csv()
+var holidayData = DataFrame.LoadCsv(".\\DecemberPublicHolidays.csv",separator:',',header:true);
+
+#!markdown
+
+## Explore the data
+
+Once the CSV is loaded into the data frame, we can look at what was imported.
+
+### Counts
+
+Let's look at row and column counts.
+
+#!csharp
+
+// How many rows?
+holidayData.Rows.Count
+
+#!csharp
+
+// How many columns?
+holidayData.Columns.Count
+
+#!markdown
+
+Wait... how do we know this is C#? We're taking the notebook approach to C#, so formal blocks of code aren't necessary in here. The following block shows the formal C# approach to it:
+
+#!csharp
+
+Console.WriteLine($"Row count: {holidayData.Rows.Count}");
+Console.WriteLine($"Column count: {holidayData.Columns.Count}");
+
+#!markdown
+
+While we have `shape` in `pandas`, there doesn't seem to be an equivalent yet in Microsoft.Data.Analysis.
+
+#!markdown
+
+### Column details
+
+After importing a CSV, you may want to make sure the column names come in accordingly. Let's look at the columns info with `.Columns`.
+
+#!csharp
+
+// What are the columns?
+holidayData.Columns
+
+#!markdown
+
+The `Microsoft.Data.Analysis` does not show the column names in its response.
+
+The `pandas` output of `.column` only shows column names:
+
+```
+Index(['countryOrRegion', 'holidayName', 'normalizeHolidayName',       'isPaidTimeOff', 'countryRegionCode', 'date'],      dtype='object')
+```
+
+`pandas` gets the details for a column through `.info()`. This is its output:
+
+```
+<class 'pandas.core.frame.DataFrame'>
+Int64Index: 107 entries, 26952 to 27058
+Data columns (total 6 columns):
+ #   Column                Non-Null Count  Dtype         
+---  ------                --------------  -----         
+ 0   countryOrRegion       107 non-null    object        
+ 1   holidayName           107 non-null    object        
+ 2   normalizeHolidayName  107 non-null    object        
+ 3   isPaidTimeOff         8 non-null      object        
+ 4   countryRegionCode     91 non-null     object        
+ 5   date                  107 non-null    datetime64[ns]
+dtypes: datetime64[ns](1), object(5)
+memory usage: 5.9+ KB
+```
+
+Let's look at `.Info()` from `Microsoft.Data.Analysis`.
+
+#!csharp
+
+holidayData.Info()
+
+#!markdown
+
+The `.Info()` output renders horizontally, showing column types – such as `System.Single`, `System.String`, and `System.DateTime` – across index 0. The number of non-null values run across index 1.
+
+While the C# equivalent shows the values horizontal rather than vertical, the `.Info()` output is close.  However, notice that Python has different non-null values.  I suspect C# is treating empty values as empty strings rather than nulls.  Let’s look at the data.
+
+#!markdown
+
+## Peek at data
+
+With `pandas`, we peek at data using `.head()`. This is the sample output in Python:
+
+<figure class="wp-block-image size-full"><img src="https://data-adventurer.com/wp-content/uploads/2021/12/image-12.png" alt="" class="wp-image-145"/><figcaption>Table of holidays with an unlabeled index column, countryOrRegion, holidayName, normalizeHolidayName, isPaidTimeOff, countryRegionCode, and date columns,</figcaption></figure>
+
+#!markdown
+
+Note: We generated the table by calling `hol_df.head().to_html()`. Thanks for that help, pandas!
+
+#!markdown
+
+How do we do peek at the data in C#? Let's see if following the pattern makes sense.
+
+#!csharp
+
+holidayData.Head()
+
+#!markdown
+
+As of this writing there isn't a default value for `.Head()` in `Microsoft.Data.Analysis`.  Let's pass in 5.
+
+#!csharp
+
+holidayData.Head(5)
+
+#!markdown
+
+There seems to be generated index values versus row numbers.  The columns look fairly similar in values except for the `isPaidTimeOff` column - which shows `None` in `pandas` and is an empty string in the C# output.
+
+Much like there's `.head()`, there's also `.tail()` to look at the last entries.  `Microsoft.Data.Analysis` has `.Tail()`, which also does not have a default value assigned to it.  So if you are working with this, make sure to pass in the number of rows to return.
+
+#!markdown
+
+## Explore the values and counts
+
+#!markdown
+
+In Python, we can call the column off the Data Frame.  Can we do that in C#?
+
+#!csharp
+
+holidayData.countryOrRegion
+
+#!markdown
+
+So dot-notation is out.  Let's try subscripting. In `pandas`, that looks like this: `hol_df['countryOrRegion']`.
+
+#!csharp
+
+holidayData["countryOrRegion"]
+
+#!markdown
+
+So we can use subscripting with double quotes.  Can we get counts for each of the values?
+Consider the following Python:
+
+```python
+hol_df['countryOrRegion'].value_counts()
+```
+
+This is a sample of the output:
+
+```
+Sweden              7
+Norway              5
+Wales               4
+Australia           4
+Finland             4
+...
+Czech               3
+Italy               3
+Mexico              3
+Denmark             2
+Germany             2
+Croatia             2
+...
+Ukraine             1
+Belgium             1
+Brazil              1
+```
+
+Now let's look at this with `.ValueCounts()` for `DataFrameColumn` in `Microsoft.Data.Analysis`.
+
+#!csharp
+
+holidayData["countryOrRegion"].ValueCounts()
+
+#!markdown
+
+Python's results came pre-sorted. Can we sort the C# results?  I don't know if `.ValueCounts()` is returning a DataFrame.  Let's try something.
+
+#!csharp
+
+holidayData["countryOrRegion"].ValueCounts().Sort("Counts")
+
+#!markdown
+
+This confirms my suspicions that `.ValueCounts()` is returning a DataFrame. But... wait a minute. That blog post mentioned a Sort method. This error message makes it sound like it isn't supported, at least not as it blogged.
+
+Thankfully, `Microsoft.Data.Analysis` is open source.  I did some digging to find where `.Sort()` lives and found it in [Microsoft.Data.Analysis/DataFrame.cs](https://github.com/dotnet/machinelearning/blob/main/src/Microsoft.Data.Analysis/DataFrame.cs) on GitHub.  Sure enough, there's no default value on the isAscending parameter.  To make things more confusing, I could use OrderBy() with just the column name, where the isAscending is defaulted to true. Or I can call OrderByDescending(), where the isAscending is defaulted to false.  So let's sort our value counts:
+
+#!csharp
+
+holidayData["countryOrRegion"].ValueCounts().OrderByDescending("Counts")
+
+#!markdown
+
+This is only the start of my exploration of `Microsoft.Data.Analysis` and working with data in a `pandas`-esque way in C#. Stay tuned for more explorations!
